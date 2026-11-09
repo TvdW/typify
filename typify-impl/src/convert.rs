@@ -2059,6 +2059,31 @@ impl TypeSpace {
                 // show that this may require more careful consideration.
                 (1, Some(InstanceType::Boolean)) => self.convert_bool(metadata),
 
+                (1, Some(InstanceType::Number))
+                    if enum_values.iter().all(|v| v.is_i64() || v.is_u64()) =>
+                {
+                    // Select a common type without rounding the literals through f64.
+                    // i128 covers enums containing both negative values and u64
+                    // values that exceed i64::MAX.
+                    let integer_type = if enum_values.iter().all(|v| v.is_i64()) {
+                        "i64"
+                    } else if enum_values.iter().all(|v| v.is_u64()) {
+                        "u64"
+                    } else {
+                        "i128"
+                    };
+                    let type_id = self.assign_type(TypeEntry::new_integer(integer_type));
+                    let type_entry = TypeEntryNewtype::from_metadata_with_enum_values(
+                        self,
+                        type_name,
+                        metadata,
+                        type_id,
+                        enum_values,
+                        original_schema.clone(),
+                    );
+                    Ok((type_entry, metadata))
+                }
+
                 (1, Some(instance_type)) => {
                     let typed_schema = SchemaObject {
                         instance_type: Some(schemars::schema::SingleOrVec::Single(Box::new(
@@ -2176,6 +2201,14 @@ mod tests {
     int_test!(NonZeroU16);
     int_test!(NonZeroU32);
     int_test!(NonZeroU64);
+
+    #[test]
+    fn test_integer_enum_rejects_non_member_defaults() {
+        let mut type_space = TypeSpace::default();
+        let schema = serde_json::from_value(json!({"enum": [1, 2, 3], "default": 5})).unwrap();
+        let result = type_space.add_type_with_name(&schema, Some("IntegerEnumDefault".to_string()));
+        assert!(matches!(result, Err(Error::InvalidValue)));
+    }
 
     #[test]
     fn test_integer_fallback() {

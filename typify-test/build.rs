@@ -203,6 +203,34 @@ fn main() {
         .add_root_schema(serde_json::from_value(integer_range_schema).unwrap())
         .unwrap();
 
+    for (title, values) in [
+        (
+            "LargeUnsignedEnum",
+            serde_json::json!([9223372036854775807u64, 18446744073709551615u64]),
+        ),
+        (
+            "AdjacentIntegerEnum",
+            serde_json::json!([9007199254740992i64, 9007199254740993i64]),
+        ),
+        (
+            "LargeSignedEnum",
+            serde_json::json!([-9007199254740993i64, 9007199254740993i64]),
+        ),
+        ("WideIntegerEnum", serde_json::json!([i64::MIN, u64::MAX])),
+        (
+            "NullableIntegerEnum",
+            serde_json::json!([null, 9007199254740993i64]),
+        ),
+        ("FractionalEnum", serde_json::json!([1, 1.5])),
+    ] {
+        type_space
+            .add_type_with_name(
+                &serde_json::from_value(serde_json::json!({ "enum": values })).unwrap(),
+                Some(title.to_string()),
+            )
+            .unwrap();
+    }
+
     let contents =
         prettyplease::unparse(&syn::parse2::<syn::File>(type_space.to_stream()).unwrap());
 

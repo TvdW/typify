@@ -9,8 +9,8 @@ use crate::{
     convert::STD_NUM_NONZERO_PREFIX,
     type_entry::{
         DefaultKind, EnumTagType, StructProperty, StructPropertyRename, StructPropertyState,
-        TypeEntry, TypeEntryDetails, TypeEntryEnum, TypeEntryNewtype, TypeEntryStruct, Variant,
-        VariantDetails, WrappedValue,
+        TypeEntry, TypeEntryDetails, TypeEntryEnum, TypeEntryNewtype, TypeEntryNewtypeConstraints,
+        TypeEntryStruct, Variant, VariantDetails, WrappedValue,
     },
     util::{sanitize, Case},
     DefaultImpl, Error, Result, TypeId, TypeSpace,
@@ -172,7 +172,16 @@ impl TypeEntry {
                     .ok_or_else(Error::invalid_value)
             }
 
-            TypeEntryDetails::Newtype(TypeEntryNewtype { type_id, .. }) => {
+            TypeEntryDetails::Newtype(TypeEntryNewtype {
+                type_id,
+                constraints,
+                ..
+            }) => {
+                if let TypeEntryNewtypeConstraints::EnumValue(values) = constraints {
+                    if !values.iter().any(|value| &value.0 == default) {
+                        return Err(Error::invalid_value());
+                    }
+                }
                 // Validate the inner type, but irrespective of the result,
                 // we'll need a custom function to make a default of the outer
                 // newtype.
