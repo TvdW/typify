@@ -131,9 +131,9 @@ impl ::schemars::JsonSchema for BlockSize {
         let mut schema = <i64 as ::schemars::JsonSchema>::json_schema(g).into_object();
         schema.enum_values = ::std::option::Option::Some(
             [
-                ::serde_json::from_str("512").unwrap(),
-                ::serde_json::from_str("2048").unwrap(),
-                ::serde_json::from_str("4096").unwrap(),
+                ::serde_json::Value::Number(::serde_json::Number::from(512i64)),
+                ::serde_json::Value::Number(::serde_json::Number::from(2048i64)),
+                ::serde_json::Value::Number(::serde_json::Number::from(4096i64)),
             ]
             .into_iter()
             .collect(),
@@ -329,9 +329,11 @@ impl ::schemars::JsonSchema for EmptyObjectProp {
     fn json_schema(g: &mut ::schemars::r#gen::SchemaGenerator) -> ::schemars::schema::Schema {
         let mut schema = < :: serde_json :: Map < :: std :: string :: String , :: serde_json :: Value > as :: schemars :: JsonSchema > :: json_schema (g) . into_object () ;
         schema.enum_values = ::std::option::Option::Some(
-            [::serde_json::from_str("{}").unwrap()]
-                .into_iter()
-                .collect(),
+            [::serde_json::Value::Object(
+                ::serde_json::Map::from_iter([]),
+            )]
+            .into_iter()
+            .collect(),
         );
         schema.into()
     }
@@ -635,9 +637,9 @@ impl ::schemars::JsonSchema for NotBlockSize {
         let not = ::schemars::schema::SchemaObject {
             enum_values: ::std::option::Option::Some(
                 [
-                    ::serde_json::from_str("512").unwrap(),
-                    ::serde_json::from_str("2048").unwrap(),
-                    ::serde_json::from_str("4096").unwrap(),
+                    ::serde_json::Value::Number(::serde_json::Number::from(512i64)),
+                    ::serde_json::Value::Number(::serde_json::Number::from(2048i64)),
+                    ::serde_json::Value::Number(::serde_json::Number::from(4096i64)),
                 ]
                 .into_iter()
                 .collect(),
