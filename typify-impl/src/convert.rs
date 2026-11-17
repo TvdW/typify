@@ -2134,6 +2134,29 @@ impl TypeSpace {
                 // show that this may require more careful consideration.
                 (1, Some(InstanceType::Boolean)) => self.convert_bool(metadata),
 
+                (1, Some(InstanceType::Number))
+                    if enum_values.iter().all(|v| v.is_i64() || v.is_u64()) =>
+                {
+                    // Keep integer enum values exact instead of coercing them to f64.
+                    let integer_type = if enum_values.iter().all(|v| v.is_i64()) {
+                        "i64"
+                    } else if enum_values.iter().all(|v| v.is_u64()) {
+                        "u64"
+                    } else {
+                        "i128"
+                    };
+                    let type_id = self.assign_type(TypeEntry::new_integer(integer_type));
+                    let type_entry = TypeEntryNewtype::from_metadata_with_enum_values(
+                        self,
+                        type_name,
+                        metadata,
+                        type_id,
+                        enum_values,
+                        original_schema.clone(),
+                    )?;
+                    Ok((type_entry, metadata))
+                }
+
                 (1, Some(instance_type)) => {
                     let typed_schema = SchemaObject {
                         instance_type: Some(schemars::schema::SingleOrVec::Single(Box::new(
@@ -2256,6 +2279,28 @@ mod tests {
     int_test!(NonZeroU16);
     int_test!(NonZeroU32);
     int_test!(NonZeroU64);
+
+    #[test]
+    fn test_untyped_integer_enum_inference() {
+        for (values, expected) in [
+            (json!([9007199254740992i64, 9007199254740993i64]), "i64"),
+            (json!([0, u64::MAX]), "u64"),
+            (json!([i64::MIN, u64::MAX]), "i128"),
+            (json!([1, 1.5]), "f64"),
+        ] {
+            let mut type_space = TypeSpace::default();
+            let schema = serde_json::from_value(json!({"enum": values})).unwrap();
+            let id = type_space
+                .add_type_with_name(&schema, Some("NumericEnum".to_string()))
+                .unwrap();
+            let typespace = type_space.to_typespace().unwrap();
+            let typespace::view::TypeDetails::Newtype(newtype) = typespace.get_type(&id).details()
+            else {
+                panic!("expected a constrained numeric newtype");
+            };
+            assert_eq!(typespace.get_type(&newtype.inner()).name(), expected);
+        }
+    }
 
     #[test]
     fn test_integer_fallback() {
